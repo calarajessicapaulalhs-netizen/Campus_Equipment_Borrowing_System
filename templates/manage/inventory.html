@@ -1,0 +1,192 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <div class="heading-with-action">
+            <h1>Inventory</h1>
+            <a class="btn-action-register-unit modal-trigger" href="{% url 'unit_create' %}" style="text-decoration: none;">
+                + Register physical unit
+            </a>
+        </div>
+    </div>
+    <!-- Top 5 Inventory Stat Summary Cards -->
+    <div class="dashboard-stat-grid inventory-stat-grid">
+        <a href="{% url 'inventory_list' %}?status=AVAILABLE" class="dashboard-stat dashboard-stat-available {% if status == 'AVAILABLE' %}active-stat-card{% endif %}" style="text-decoration: none;">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Available</span>
+                <div class="stat">{{ totals.AVAILABLE|default:"0" }}</div>
+            </div>
+        </a>
+        <a href="{% url 'inventory_list' %}?status=RESERVED" class="dashboard-stat dashboard-stat-reserved {% if status == 'RESERVED' %}active-stat-card{% endif %}" style="text-decoration: none;">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Reserved</span>
+                <div class="stat">{{ totals.RESERVED|default:"0" }}</div>
+            </div>
+        </a>
+        <a href="{% url 'inventory_list' %}?status=ISSUED" class="dashboard-stat dashboard-stat-issued {% if status == 'ISSUED' %}active-stat-card{% endif %}" style="text-decoration: none;">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Issued</span>
+                <div class="stat">{{ totals.ISSUED|default:"0" }}</div>
+            </div>
+        </a>
+        <a href="{% url 'inventory_list' %}?status=MAINTENANCE" class="dashboard-stat dashboard-stat-maintenance {% if status == 'MAINTENANCE' %}active-stat-card{% endif %}" style="text-decoration: none;">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Maintenance</span>
+                <div class="stat">{{ totals.MAINTENANCE|default:"0" }}</div>
+            </div>
+        </a>
+        <a href="{% url 'inventory_list' %}?status=RETIRED" class="dashboard-stat dashboard-stat-retired {% if status == 'RETIRED' %}active-stat-card{% endif %}" style="text-decoration: none;">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Retired</span>
+                <div class="stat">{{ totals.RETIRED|default:"0" }}</div>
+            </div>
+        </a>
+    </div>
+    <form method="get" class="requests-filter-bar">
+        <div class="filter-left-col">
+            <label class="filter-field">
+                <span class="filter-field-label">Search</span>
+                <input name="q" value="{{ q }}" placeholder="Asset code, item or category" class="filter-search-input" onsearch="this.form.submit();" onchange="this.form.submit();">
+            </label>
+        </div>
+        <div class="filter-right-col">
+            <label class="filter-field">
+                <span class="filter-field-label">Category</span>
+                <select name="category" class="filter-select" onchange="this.form.item.value=''; this.form.submit();">
+                    <option value="">All categories</option>
+                    {% for choice in categories %}
+                        <option
+                            value="{{ choice.pk }}"
+                            {% if category == choice.pk|stringformat:'s' %}selected{% endif %}
+                        >
+                            {{ choice.name }}{% if not choice.is_active %} (archived){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="filter-field">
+                <span class="filter-field-label">Item</span>
+                <select name="item" class="filter-select" onchange="this.form.submit();">
+                    <option value="">All items</option>
+                    {% for choice in items %}
+                        <option
+                            value="{{ choice.pk }}"
+                            {% if item == choice.pk|stringformat:'s' %}selected{% endif %}
+                        >
+                            {{ choice.name }} — {{ choice.category.name }}
+                            {% if not choice.is_active %}(archived){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="filter-field">
+                <span class="filter-field-label">Status</span>
+                <select name="status" class="filter-select" onchange="this.form.submit();">
+                    <option value="">All statuses</option>
+                    {% for value, label in statuses %}
+                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </label>
+            {% if q or category or item or status %}
+                <a class="btn-filter-reset" href="{% url 'inventory_list' %}">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+    <section class="records-card">
+        <div class="records-card-header">
+            <h2>Records</h2>
+        </div>
+        <div class="scroll">
+            <table class="dashboard-records-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Asset</th>
+                        <th scope="col">Item</th>
+                        <th scope="col">Category</th>
+                        <th scope="col">Condition</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Acquired</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in units %}
+                        <tr>
+                            <td>
+                                <strong>{{ u.asset_code }}</strong>
+                            </td>
+                            <td>{{ u.item.name }}</td>
+                            <td>{{ u.item.category.name }}</td>
+                            <td>{{ u.get_condition_display }}</td>
+                            <td>
+                                {% if u.status == 'AVAILABLE' %}
+                                    <span class="status-text status-approved">{{ u.get_status_display }}</span>
+                                {% elif u.status == 'RESERVED' or u.status == 'ISSUED' %}
+                                    <span class="status-text status-active">{{ u.get_status_display }}</span>
+                                {% elif u.status == 'MAINTENANCE' %}
+                                    <span class="status-text status-pending">{{ u.get_status_display }}</span>
+                                {% else %}
+                                    <span class="status-text">{{ u.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ u.acquired_on|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="action-group" style="display: flex; gap: .4rem; align-items: center;">
+                                    <a
+                                        class="btn-table-action modal-trigger"
+                                        href="{% url 'unit_edit' u.pk %}"
+                                        aria-label="Edit {{ u.asset_code }} details"
+                                    >
+                                        Edit
+                                    </a>
+                                    {% if u.status == 'AVAILABLE' or u.status == 'MAINTENANCE' %}
+                                        <form
+                                            class="inline"
+                                            method="post"
+                                            action="{% url 'unit_retire' u.pk %}"
+                                            onsubmit="return confirm('Retire this physical unit permanently?')"
+                                        >
+                                            {% csrf_token %}
+                                            <button
+                                                class="btn-table-action"
+                                                type="submit"
+                                                style="color: #dc2626; border-color: #fca5a5;"
+                                            >
+                                                Retire
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="dashboard-empty-row">No physical units registered.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages or page.paginator.count > 0 %}
+            <nav class="pagination" aria-label="Inventory pagination" style="display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1rem .5rem 0;">
+                <span class="pagination-info" style="font-size: .8rem; color: #4b5563;">
+                    Page {{ page.number }} of {{ page.paginator.num_pages|default:1 }} ({{ page.paginator.count }} total)
+                </span>
+                <div style="display: inline-flex; gap: .35rem;">
+                    {% if page.has_previous %}
+                        <a class="btn-table-action" href="?page={{ page.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if item %}&item={{ item }}{% endif %}{% if status %}&status={{ status }}{% endif %}">&larr; Previous</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">&larr; Previous</span>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <a class="btn-table-action" href="?page={{ page.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if item %}&item={{ item }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next &rarr;</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">Next &rarr;</span>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </section>
+{% endblock %}

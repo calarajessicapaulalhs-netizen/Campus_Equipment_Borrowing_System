@@ -1,0 +1,135 @@
+{% extends "manage/base.html" %}
+{% block content %}
+<div class="page-heading">
+    <p class="eyebrow">CAMPUS EQUIPMENT</p>
+    <h1>{{ title }}</h1>
+</div>
+
+<section class="request-summary" style="margin-bottom: 1.5rem;">
+    <p>
+        <strong>Asset Code</strong>
+        <span><strong>{{ record.unit.asset_code }}</strong></span>
+    </p>
+    <p>
+        <strong>Equipment Item</strong>
+        <span>{{ record.unit.item.name }}</span>
+    </p>
+    <p>
+        <strong>Category</strong>
+        <span>{{ record.unit.item.category.name|default:"General" }}</span>
+    </p>
+    <p>
+        <strong>Date Opened</strong>
+        <span>{{ record.opened_at|date:"M d, Y H:i" }}</span>
+    </p>
+    <p>
+        <strong>Opened By Admin</strong>
+        <span>{{ record.opened_by.get_full_name|default:record.opened_by.username }}</span>
+    </p>
+    <p>
+        <strong>Current Unit Status</strong>
+        <span class="status-text status-pending">{{ record.unit.get_status_display }}</span>
+    </p>
+    <p style="grid-column: 1 / -1; background: #fff8f8; padding: 0.75rem 1rem; border-left: 3px solid #dc2626; border-radius: 0.35rem;">
+        <strong style="color: #991b1b;">Reported Problem</strong>
+        <span style="color: #374151; white-space: pre-wrap; font-size: 0.95rem;">{{ record.problem }}</span>
+    </p>
+</section>
+
+<form
+    method="post"
+    action="{% url 'maintenance_close' record.pk %}"
+    class="panel form-panel"
+    data-standard-submit="false"
+    onsubmit="return confirmMaintenanceClose(this);"
+    style="background: #ffffff; border: 1px solid var(--line, #e5e7eb); border-radius: 0.75rem; padding: 1.5rem;"
+>
+    {% csrf_token %}
+
+    <div style="margin-bottom: 1.25rem;">
+        <label for="{{ form.action.id_for_label }}" style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.4rem; color: #1f2937;">
+            Action Taken / Resolution Notes <span style="color: #dc2626;">*</span>
+        </label>
+        {{ form.action }}
+        {% if form.action.help_text %}
+            <p class="muted" style="font-size: 0.8rem; margin-top: 0.3rem; color: #6b7280;">{{ form.action.help_text }}</p>
+        {% endif %}
+        {% if form.action.errors %}
+            <div class="alert alert-error" style="margin-top: 0.35rem;">{{ form.action.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div style="margin-bottom: 1.5rem; background: #f9fafb; padding: 1rem 1.15rem; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+        <label style="display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.65rem; color: #1f2937;">
+            Choose Unit Outcome:
+        </label>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for radio in form.outcome %}
+                <label style="display: flex; align-items: flex-start; gap: 0.65rem; cursor: pointer; font-size: 0.95rem; color: #1f2937; padding: 0.65rem 0.85rem; border-radius: 0.45rem; border: 1px solid {% if radio.data.value == 'RETIRED' %}#fecaca{% else %}#bbf7d0{% endif %}; background: {% if radio.data.value == 'RETIRED' %}#fff5f5{% else %}#f0fdf4{% endif %};">
+                    <span style="margin-top: 0.15rem;">{{ radio.tag }}</span>
+                    <div>
+                        <strong style="color: {% if radio.data.value == 'RETIRED' %}#991b1b{% else %}#166534{% endif %};">{{ radio.choice_label }}</strong>
+                        <p class="muted" style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #4b5563;">
+                            {% if radio.data.value == 'RETIRED' %}
+                                Unit cannot be repaired. It will be permanently retired and stay unavailable.
+                            {% else %}
+                                Unit has been repaired. It will be restored and become available for students and staff to borrow.
+                            {% endif %}
+                        </p>
+                    </div>
+                </label>
+            {% endfor %}
+        </div>
+        {% if form.outcome.errors %}
+            <div class="alert alert-error" style="margin-top: 0.35rem;">{{ form.outcome.errors }}</div>
+        {% endif %}
+    </div>
+
+    <div class="form-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center; padding-top: 0.5rem; border-top: 1px solid #f3f4f6;">
+        <button
+            type="submit"
+            class="btn-filter-submit"
+            style="background-color: #5b080c; color: #ffffff; padding: 0.65rem 1.4rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; font-size: 0.95rem;"
+        >
+            Complete & Close Maintenance
+        </button>
+        <a
+            class="btn secondary modal-close"
+            href="{% url back %}"
+            style="padding: 0.65rem 1.2rem; border-radius: 0.5rem; text-decoration: none; border: 1px solid #d1d5db; color: #374151; font-weight: 500; font-size: 0.95rem; display: inline-flex; align-items: center;"
+        >
+            Cancel
+        </a>
+    </div>
+</form>
+
+<script>
+function confirmMaintenanceClose(form) {
+    const actionField = form.querySelector('[name="action"]');
+    const actionText = actionField ? actionField.value.trim() : "";
+    if (!actionText) {
+        alert("Please enter the Action Taken / Resolution Notes before completing maintenance.");
+        if (actionField) actionField.focus();
+        return false;
+    }
+
+    const outcomeRadio = form.querySelector('input[name="outcome"]:checked');
+    const outcomeValue = outcomeRadio ? outcomeRadio.value : "AVAILABLE";
+
+    let outcomeDescription = "";
+    if (outcomeValue === "RETIRED") {
+        outcomeDescription = "Retire Unit (Unserviceable / Beyond repair)\n-> Unit cannot be repaired. It will be retired and stay unavailable.";
+    } else {
+        outcomeDescription = "Release as Available (Repaired)\n-> Unit is fixed and will be available to borrow.";
+    }
+
+    const msg = "Are you sure you want to complete this maintenance transaction?\n\n" +
+                "Asset: {{ record.unit.asset_code|escapejs }} ({{ record.unit.item.name|escapejs }})\n\n" +
+                "Action Taken:\n\"" + actionText + "\"\n\n" +
+                "Selected Outcome:\n" + outcomeDescription + "\n\n" +
+                "Click OK to confirm and save.";
+
+    return confirm(msg);
+}
+</script>
+{% endblock %}

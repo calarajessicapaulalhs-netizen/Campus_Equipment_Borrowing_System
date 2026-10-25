@@ -1,0 +1,387 @@
+{% extends "portal/base.html" %}
+{% load static %}
+
+{% block title %}Browse Equipment & My Loans | CEBIS{% endblock %}
+
+{% block content %}
+<div class="portal-container">
+
+  <!-- Welcome Hero Banner -->
+  <section class="portal-hero" aria-label="Borrower welcome">
+    <div class="portal-hero-content">
+      <div class="portal-hero-text">
+        <span class="portal-hero-badge">Campus Equipment Borrowing Portal</span>
+        <h1>Welcome, {{ user.get_full_name|default:user.username }}!</h1>
+        <p>Browse active campus gear, submit borrowing requests, and track your loans and due dates in real-time.</p>
+      </div>
+      <div class="portal-hero-actions">
+        <a class="btn-hero-primary" href="{% url 'request_create' %}">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>New Borrow Request</span>
+        </a>
+        <a class="btn-hero-secondary" href="#my-requests">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Track My Loans</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Status Overview Cards -->
+  <section class="portal-stats-grid" aria-label="Borrowing overview">
+    <div class="portal-stat-card stat-card-active">
+      <div class="stat-icon-wrapper">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      </div>
+      <div class="stat-card-info">
+        <span class="stat-number">{{ stats.active|default:0 }}</span>
+        <span class="stat-title">Active Loans</span>
+      </div>
+    </div>
+
+    <div class="portal-stat-card stat-card-pending">
+      <div class="stat-icon-wrapper">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      </div>
+      <div class="stat-card-info">
+        <span class="stat-number">{{ stats.pending|default:0 }}</span>
+        <span class="stat-title">Pending Review</span>
+      </div>
+    </div>
+
+    <div class="portal-stat-card stat-card-approved">
+      <div class="stat-icon-wrapper">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      </div>
+      <div class="stat-card-info">
+        <span class="stat-number">{{ stats.approved|default:0 }}</span>
+        <span class="stat-title">Approved (Ready)</span>
+      </div>
+    </div>
+
+    <div class="portal-stat-card stat-card-total">
+      <div class="stat-icon-wrapper">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      </div>
+      <div class="stat-card-info">
+        <span class="stat-number">{{ stats.total|default:0 }}</span>
+        <span class="stat-title">Total Requests</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Equipment Catalog Section -->
+  <section class="portal-catalog-section" aria-labelledby="catalog-heading">
+    <div class="section-header-row">
+      <div>
+        <h2 id="catalog-heading" class="portal-section-title">Campus Equipment Catalog</h2>
+        <p class="portal-section-desc">Search equipment by name or category and select items to request.</p>
+      </div>
+    </div>
+
+    <!-- Search & Category Filters -->
+    <div class="catalog-filter-card">
+      <form method="get" class="catalog-search-form" action="{% url 'portal_home' %}">
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input
+            id="equipment-search"
+            type="search"
+            name="q"
+            value="{{ q }}"
+            placeholder="Search equipment by name or keyword..."
+            aria-label="Search equipment"
+          >
+          {% if q or selected_category %}
+            <a class="clear-search-btn" href="{% url 'portal_home' %}" title="Clear filters">×</a>
+          {% endif %}
+        </div>
+
+        {% if selected_category %}
+          <input type="hidden" name="category" value="{{ selected_category }}">
+        {% endif %}
+
+        <button type="submit" class="btn-catalog-search">Search</button>
+      </form>
+
+      <!-- Category Filter Pills -->
+      {% if categories %}
+        <div class="category-pills-row" aria-label="Filter by category">
+          <span class="category-pills-label">Category:</span>
+          <a
+            class="category-pill {% if not selected_category %}active{% endif %}"
+            href="{% url 'portal_home' %}{% if q %}?q={{ q }}{% endif %}"
+          >All Categories</a>
+          {% for cat in categories %}
+            <a
+              class="category-pill {% if selected_category == cat.pk %}active{% endif %}"
+              href="{% url 'portal_home' %}?category={{ cat.pk }}{% if q %}&q={{ q }}{% endif %}"
+            >{{ cat.name }}</a>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Equipment Cards Grid -->
+    <div class="equipment-grid">
+      {% for item in items %}
+        <article class="equipment-card {% if item.available <= 0 %}equipment-card-unavailable{% endif %}" style="{% if item.available <= 0 %}opacity: 0.92; border-color: #e5e7eb;{% endif %}">
+          <div class="equipment-photo-container" style="position: relative;">
+            <img
+              class="equipment-photo"
+              src="{% static item.photo_path %}"
+              alt="{{ item.name }}"
+              loading="lazy"
+              style="{% if item.available <= 0 %}filter: grayscale(35%);{% endif %}"
+            >
+            <span class="equipment-category-pill">{{ item.category.name }}</span>
+            {% if item.available <= 0 %}
+              <span class="equipment-unavailable-tag" style="position: absolute; top: 10px; right: 10px; background: rgba(185, 28, 28, 0.92); color: #ffffff; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; z-index: 2; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">Unavailable</span>
+            {% endif %}
+          </div>
+
+          <div class="equipment-card-content">
+            <h3 class="equipment-card-name">{{ item.name }}</h3>
+            <p class="equipment-description">
+              {{ item.description|default:"Standard campus equipment available for academic borrowing." }}
+            </p>
+
+            <div class="equipment-stock-row">
+              {% if item.available > 0 %}
+                <span class="stock-pill stock-in">
+                  <span class="stock-dot"></span>
+                  {{ item.available }} Available
+                </span>
+              {% else %}
+                <span class="stock-pill stock-out" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-weight: 600;">
+                  <span class="stock-dot" style="background: #ef4444;"></span>
+                  Unavailable (0 Left)
+                </span>
+              {% endif %}
+              <span class="stock-serviceable">{{ item.serviceable }} serviceable</span>
+            </div>
+
+            <div class="equipment-card-footer">
+              {% if item.available > 0 %}
+                <a
+                  class="btn-request-item"
+                  href="{% url 'request_create' %}?item={{ item.pk }}"
+                  title="Request {{ item.name }}"
+                >
+                  <span>Request to Borrow</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </a>
+              {% else %}
+                <button
+                  type="button"
+                  class="btn-request-item btn-request-disabled"
+                  disabled
+                  title="{{ item.name }} currently has no items left and cannot be borrowed."
+                  style="background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; cursor: not-allowed; pointer-events: none; opacity: 0.85; width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                  <span>Unavailable — Cannot Borrow</span>
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% empty %}
+        <div class="empty-catalog-state">
+          <div class="empty-icon-circle">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <h3>No equipment matches your search</h3>
+          <p>Try searching for a different keyword or view all categories.</p>
+          <a class="btn-empty-reset" href="{% url 'portal_home' %}">View All Equipment</a>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- My Requests and Loans Table Section -->
+  <section class="portal-requests-section" id="my-requests" aria-labelledby="requests-heading">
+    <div class="section-header-row">
+      <div>
+        <h2 id="requests-heading" class="portal-section-title">My Requests &amp; Loans</h2>
+        <p class="portal-section-desc">Track status updates, issued unit asset codes, return deadlines, and cancellation options.</p>
+      </div>
+      <a class="btn-create-request-inline" href="{% url 'request_create' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Submit Request</span>
+      </a>
+    </div>
+
+    <div class="user-table-card">
+      <div class="table-responsive">
+        <table class="user-records-table">
+          <thead>
+            <tr>
+              <th scope="col" style="width: 14%;">Request</th>
+              <th scope="col" style="width: 26%;">Items &amp; Quantity</th>
+              <th scope="col" style="width: 24%;">Issued Units</th>
+              <th scope="col" style="width: 14%;">Due Date</th>
+              <th scope="col" style="width: 12%;">Status</th>
+              <th scope="col" style="width: 10%; text-align: center;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in requests %}
+              <tr>
+                <td>
+                  <div class="req-id-cell">
+                    <span class="req-badge">#{{ r.pk }}</span>
+                    <span class="req-date">{{ r.submitted_at|date:"M d, Y" }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="req-items-list">
+                    {% for line in r.lines.all %}
+                      <div class="req-item-chip">
+                        <span class="item-name">{{ line.item.name }}</span>
+                        <span class="item-qty">× {{ line.quantity }}</span>
+                      </div>
+                    {% empty %}
+                      <span class="muted-text">—</span>
+                    {% endfor %}
+                  </div>
+                </td>
+                <td>
+                  {% if r.loan %}
+                    <div class="allocated-units-list">
+                      {% for line in r.lines.all %}
+                        {% for allocation in line.allocations.all %}
+                          <span class="unit-code-pill {% if allocation.return_record %}unit-returned{% elif allocation.released_at %}unit-released{% else %}unit-pending{% endif %}">
+                            <span class="unit-code-text">{{ allocation.unit.asset_code }}</span>
+                            <span class="unit-status-tag">
+                              {% if allocation.return_record %}
+                                (returned)
+                              {% elif allocation.released_at %}
+                                (released)
+                              {% else %}
+                                (outstanding)
+                              {% endif %}
+                            </span>
+                          </span>
+                        {% endfor %}
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <span class="muted-text">Not issued yet</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="due-date-cell">
+                    <span class="due-date-text">{{ r.due_date|date:"M d, Y" }}</span>
+                    {% if r.loan and r.loan.is_overdue %}
+                      <span class="badge-overdue-flag">⚠ Overdue</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  {% if r.status == 'PENDING' %}
+                    <span class="user-status-badge status-pending">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      Pending
+                    </span>
+                  {% elif r.status == 'APPROVED' %}
+                    <span class="user-status-badge status-approved">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                      Approved
+                    </span>
+                  {% elif r.status == 'ISSUED' %}
+                    <span class="user-status-badge status-issued">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                      Issued
+                    </span>
+                  {% elif r.status == 'PARTIAL' %}
+                    <span class="user-status-badge status-partial">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                      Partial Returned
+                    </span>
+                  {% elif r.status == 'RETURNED' %}
+                    <span class="user-status-badge status-returned">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                      Returned
+                    </span>
+                  {% elif r.status == 'CANCELLED' %}
+                    <span class="user-status-badge status-cancelled">
+                      Cancelled
+                    </span>
+                  {% elif r.status == 'REJECTED' %}
+                    <span class="user-status-badge status-rejected">
+                      Rejected
+                    </span>
+                  {% else %}
+                    <span class="user-status-badge">{{ r.get_status_display }}</span>
+                  {% endif %}
+                </td>
+                <td style="text-align: center;">
+                  {% if r.status == 'PENDING' or r.status == 'APPROVED' %}
+                    <form
+                      method="post"
+                      action="{% url 'request_cancel' r.pk %}"
+                      onsubmit="return confirm('Are you sure you want to cancel Request #{{ r.pk }}?')"
+                      style="display: inline-block; margin: 0;"
+                    >
+                      {% csrf_token %}
+                      <button class="btn-table-cancel" type="submit" title="Cancel this request">
+                        Cancel
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="table-no-action">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="table-empty-row">
+                  <div class="empty-table-state">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                    <h4>No requests or active loans</h4>
+                    <p>You have not submitted any equipment requests yet. Choose items from the catalog above to get started.</p>
+                    <a class="btn-empty-action" href="{% url 'request_create' %}">Submit a Request</a>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination Footer -->
+      {% if requests.has_other_pages %}
+        <div class="user-pagination-bar">
+          <span class="pagination-info">
+            Showing Page <strong>{{ requests.number }}</strong> of <strong>{{ requests.paginator.num_pages }}</strong>
+            ({{ requests.paginator.count }} total records)
+          </span>
+          <div class="pagination-buttons">
+            {% if requests.has_previous %}
+              <a
+                class="btn-pagination-nav"
+                href="?page={{ requests.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}#my-requests"
+              >← Previous</a>
+            {% else %}
+              <span class="btn-pagination-nav disabled">← Previous</span>
+            {% endif %}
+
+            <span class="pagination-current-page">{{ requests.number }}</span>
+
+            {% if requests.has_next %}
+              <a
+                class="btn-pagination-nav"
+                href="?page={{ requests.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}#my-requests"
+              >Next →</a>
+            {% else %}
+              <span class="btn-pagination-nav disabled">Next →</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+{% endblock %}

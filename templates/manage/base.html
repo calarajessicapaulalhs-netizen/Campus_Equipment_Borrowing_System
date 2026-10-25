@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}admin-shell{% endblock %}
+
+{% block layout %}
+  <div class="admin-layout">
+    {% include "components/admin_sidebar.html" %}
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <span>Admin</span>
+      </div>
+      <main class="wrap admin-content">
+        {% if messages %}
+        <dialog class="notification-dialog" data-notification-dialog aria-labelledby="notification-title">
+          {% for message in messages %}
+            {% if forloop.first %}
+              <div class="notification-icon{% if 'success' in message.tags %} is-success{% elif 'error' in message.tags or 'danger' in message.tags %} is-error{% elif 'warning' in message.tags %} is-warning{% else %} is-info{% endif %}" aria-hidden="true">
+                {% if 'success' in message.tags %}✓{% elif 'error' in message.tags or 'danger' in message.tags %}×{% elif 'warning' in message.tags %}!{% else %}i{% endif %}
+              </div>
+              <h2 id="notification-title">{% if 'success' in message.tags %}SUCCESS!{% elif 'error' in message.tags or 'danger' in message.tags %}ACTION NEEDED{% elif 'warning' in message.tags %}PLEASE NOTE{% else %}NOTICE{% endif %}</h2>
+            {% endif %}
+            <p class="notification-message"{% if forloop.first %} role="alert"{% endif %}>{{ message }}</p>
+          {% endfor %}
+          <button class="notification-close" type="button" data-notification-close>Close</button>
+        </dialog>
+      {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+      <footer>Campus Equipment Borrowing and Inventory System</footer>
+    </div>
+  </div>
+{% endblock %}

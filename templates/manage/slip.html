@@ -1,0 +1,44 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <h1>Equipment borrowing slip</h1>
+    </div>
+    <section class="records-card" style="max-width: 650px;">
+        <div class="records-card-header">
+            <h2>Loan # {{ loan.pk }}</h2>
+        </div>
+        <div style="display: grid; grid-template-columns: 140px 1fr; gap: .75rem; font-size: .88rem; margin-bottom: 1.25rem;">
+            <strong style="color: #4b5563;">Borrower:</strong>
+            <span style="font-weight: 600; color: #111827;">{{ loan.request.owner.get_full_name|default:loan.request.owner.username }}</span>
+
+            <strong style="color: #4b5563;">Released:</strong>
+            <span>{{ loan.issued_at|date:"Y-m-d H:i" }}</span>
+
+            <strong style="color: #4b5563;">Due date:</strong>
+            <span>{{ loan.due_date|date:"Y-m-d" }}</span>
+
+            <strong style="color: #4b5563;">Issued by:</strong>
+            <span>{{ loan.issued_by.get_full_name|default:loan.issued_by.username }}</span>
+        </div>
+
+        <h3 style="font-size: .95rem; font-weight: 700; margin: 1rem 0 .5rem; color: #111827;">Assigned assets</h3>
+        <ul style="margin: 0 0 1.5rem; padding-left: 1.25rem; font-size: .88rem; line-height: 1.6;">
+            {% for a in loan.allocations %}
+                <li>
+                    <strong>{{ a.unit.asset_code }}</strong> &mdash; {{ a.unit.item.name }}
+                </li>
+            {% empty %}
+                <li class="muted">No units allocated.</li>
+            {% endfor %}
+        </ul>
+
+        <div style="display: flex; gap: .75rem; align-items: center;">
+            <button class="btn-filter-submit" onclick="window.print()">
+                Print slip
+            </button>
+            <a class="btn-filter-reset" href="{% url 'loans' %}">
+                Back to reports
+            </a>
+        </div>
+    </section>
+{% endblock %}

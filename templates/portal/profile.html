@@ -1,0 +1,137 @@
+{% extends "portal/base.html" %}
+{% load static %}
+
+{% block title %}My Profile | CEBIS{% endblock %}
+
+{% block content %}
+<div class="portal-profile-container">
+
+  <!-- Header & Breadcrumb -->
+  <div class="portal-page-header">
+    <a class="btn-back-breadcrumb" href="{% url 'portal_home' %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      <span>Back to Equipment Catalog</span>
+    </a>
+    <div class="portal-header-titles">
+      <span class="portal-header-eyebrow">ACCOUNT SETTINGS</span>
+      <h1>My Borrower Profile</h1>
+      <p>Keep your contact details up to date so campus administrators can coordinate equipment handovers.</p>
+    </div>
+  </div>
+
+  <div class="profile-layout-grid">
+
+    <!-- Left Side: Identity Summary Card -->
+    <aside class="profile-identity-card" aria-label="Account Overview">
+      <div class="profile-avatar-large" aria-hidden="true">
+        {% if user.first_name %}
+          {{ user.first_name|first|upper }}
+        {% else %}
+          {{ user.username|first|upper }}
+        {% endif %}
+      </div>
+
+      <h2 class="profile-user-fullname">{{ user.get_full_name|default:user.username }}</h2>
+      <span class="profile-username-tag">@{{ user.username }}</span>
+
+      <div class="profile-role-badge">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <span>Campus Borrower</span>
+      </div>
+
+      <div class="profile-meta-list">
+        <div class="profile-meta-item">
+          <span class="meta-label">Account Status</span>
+          <span class="meta-value status-active-pill">
+            <span class="status-dot-green"></span>
+            Active
+          </span>
+        </div>
+        <div class="profile-meta-item">
+          <span class="meta-label">Registered Role</span>
+          <span class="meta-value">Basic User</span>
+        </div>
+        <div class="profile-meta-item">
+          <span class="meta-label">User ID</span>
+          <span class="meta-value">#{{ user.pk }}</span>
+        </div>
+      </div>
+
+      <div class="profile-quick-nav">
+        <a class="btn-profile-quick" href="{% url 'portal_home' %}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          <span>Browse Equipment</span>
+        </a>
+        <a class="btn-profile-quick" href="{% url 'portal_home' %}#my-requests">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>My Loans &amp; Requests</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Right Side: Edit Form Card -->
+    <section class="profile-edit-card" aria-labelledby="contact-heading">
+      <div class="profile-card-header">
+        <h2 id="contact-heading">Personal &amp; Contact Information</h2>
+        <p>Update your display name, primary email address, and mobile number. Your account role is managed by administrators.</p>
+      </div>
+
+      <form method="post" class="profile-form-inner" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="portal-alert-error" role="alert">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
+        <div class="form-row-2col">
+          <div class="portal-form-group">
+            <label class="portal-label" for="{{ form.first_name.id_for_label }}">First Name</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+              <div class="portal-field-error" role="alert">{{ form.first_name.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="portal-form-group">
+            <label class="portal-label" for="{{ form.last_name.id_for_label }}">Last Name</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+              <div class="portal-field-error" role="alert">{{ form.last_name.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="portal-form-group">
+          <label class="portal-label" for="{{ form.email.id_for_label }}">Email Address</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <div class="portal-field-error" role="alert">{{ form.email.errors }}</div>
+          {% endif %}
+          <span class="portal-field-hint">Used for loan status alerts, due date reminders, and password resets.</span>
+        </div>
+
+        <div class="portal-form-group">
+          <label class="portal-label" for="{{ form.phone.id_for_label }}">Contact / Phone Number</label>
+          {{ form.phone }}
+          {% if form.phone.errors %}
+            <div class="portal-field-error" role="alert">{{ form.phone.errors }}</div>
+          {% endif %}
+          <span class="portal-field-hint">e.g. 09123456789 (optional, for urgent equipment coordination).</span>
+        </div>
+
+        <div class="profile-form-footer">
+          <button class="btn-save-profile" type="submit">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span>Save Profile</span>
+          </button>
+          <a class="btn-cancel-profile" href="{% url 'portal_home' %}">Cancel</a>
+        </div>
+      </form>
+    </section>
+
+  </div>
+
+</div>
+{% endblock %}

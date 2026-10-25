@@ -1,0 +1,124 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <p class="eyebrow">
+            {% if object %}
+                REQUEST REVIEW
+            {% else %}
+                CAMPUS EQUIPMENT
+            {% endif %}
+        </p>
+        <h1>
+            {{ title }}
+        </h1>
+    </div>
+    {% if object %}
+        <section class="request-summary">
+            <p>
+                <strong>
+                    Borrower
+                </strong>
+                <span>
+                    {{ object.owner.get_full_name|default:object.owner.username }}
+                </span>
+            </p>
+            <p>
+                <strong>
+                    Purpose
+                </strong>
+                <span>
+                    {{ object.purpose }}
+                </span>
+            </p>
+            <p>
+                <strong>
+                    Due date
+                </strong>
+                <span>
+                    {{ object.due_date }}
+                </span>
+            </p>
+            <div>
+                <strong>
+                    Requested items
+                </strong>
+                {% for line in object.lines.all %}
+                    <span class="pill">
+                        {{ line.item.name }} × {{ line.quantity }}
+                    </span>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+    <form
+        method="post"
+        action="{{ request.path }}"
+        class="panel form-panel"
+        {% if object %}data-standard-submit="true"{% endif %}
+        {% if confirmation %}onsubmit="return confirm('{{ confirmation|escapejs }}')"{% endif %}
+    >
+        {% csrf_token %}
+        {% if object %}
+          <div class="request-summary">
+            <p>
+              <strong>Requested equipment availability</strong>
+            </p>
+            {% for line in object.lines.all %}
+              <p>
+                <span>
+                  {{ line.item.name }}: {{ line.quantity }} requested,
+                  {{ line.available_quantity }} available
+                </span>
+              </p>
+            {% endfor %}
+          </div>
+          {% if form.reason.errors %}
+            {{ form.reason.errors }}
+          {% endif %}
+          <label for="id_reason">Decision reason (required)</label>
+          {{ form.reason }}
+          {{ form.decision.errors }}
+          <div class="form-actions">
+            {% if object.can_approve %}
+              <button
+                type="submit"
+                name="decision"
+                value="approve"
+                onclick="return confirm('Approve this request and reserve the listed units?')"
+              >Approve and reserve units</button>
+            {% else %}
+              <button
+                type="button"
+                disabled
+                title="Add available physical units before approving"
+              >Not enough available units</button>
+            {% endif %}
+            <button
+              type="submit"
+              name="decision"
+              value="reject"
+              class="danger"
+              onclick="return confirm('Reject this request? This decision will be recorded.')"
+            >Reject request</button>
+            <a class="btn secondary modal-close" href="{% url back %}">Cancel</a>
+          </div>
+        {% else %}
+          {% for field in form %}
+            <p{% if field.errors %} class="has-field-error"{% endif %}>
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.errors %}
+                    <span class="auth-field-error" role="alert">{{ field.errors.0 }}</span>
+                {% endif %}
+                {% if field.help_text %}
+                    <span class="helptext">{{ field.help_text }}</span>
+                {% endif %}
+            </p>
+          {% endfor %}
+          <div class="form-actions">
+            <button type="submit">Save changes</button>
+            <a class="btn secondary modal-close" href="{% url back %}">Cancel</a>
+          </div>
+        {% endif %}
+    </form>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <h1>Maintenance</h1>
+    </div>
+    <section class="records-card">
+        <div class="records-card-header">
+            <h2>Open repair ticket</h2>
+        </div>
+        <form method="post" class="panel form-panel" style="background: transparent; border: 0; box-shadow: none; padding: 0;">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn-filter-submit" style="margin-top: .75rem;">
+                Open ticket
+            </button>
+        </form>
+    </section>
+    <section class="records-card">
+        <div class="records-card-header">
+            <h2>Records</h2>
+        </div>
+        <div class="scroll">
+            <table class="dashboard-records-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Asset</th>
+                        <th scope="col">Problem & Resolution</th>
+                        <th scope="col">Timeline & Admin</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                        <tr>
+                            <td>
+                                <strong>{{ r.unit.asset_code }}</strong>
+                                {% if r.unit.item %}
+                                    <div class="muted" style="font-size: 0.78rem;">{{ r.unit.item.name }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ r.problem }}</div>
+                                {% if r.action %}
+                                    <div style="margin-top: 0.35rem; font-size: 0.8rem; line-height: 1.35;">
+                                        {% if r.unit.status == 'RETIRED' %}
+                                            <span style="color: #991b1b; background: #fff1f2; padding: 0.2rem 0.5rem; border-radius: 0.25rem; display: inline-block; border: 1px solid #fecaca;">
+                                                <strong>Retirement Reason:</strong> {{ r.action }}
+                                            </span>
+                                        {% else %}
+                                            <span style="color: #047857; background: #ecfdf5; padding: 0.2rem 0.5rem; border-radius: 0.25rem; display: inline-block; border: 1px solid #a7f3d0;">
+                                                <strong>Action Taken:</strong> {{ r.action }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td style="font-size: 0.82rem; line-height: 1.4;">
+                                <div>
+                                    <span class="muted">Opened:</span> {{ r.opened_at|date:"M d, Y" }}
+                                    <span class="muted">({{ r.opened_by.username }})</span>
+                                </div>
+                                {% if r.closed_at %}
+                                    <div style="margin-top: 0.2rem;">
+                                        <span class="muted">Closed:</span> {{ r.closed_at|date:"M d, Y" }}
+                                        <span class="muted">({{ r.closed_by.username|default:"admin" }})</span>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.is_open %}
+                                    <span class="status-text status-pending">Open</span>
+                                {% else %}
+                                    {% if r.unit.status == 'RETIRED' %}
+                                        <span class="status-text" style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; font-weight: 600;">Retired (Unserviceable)</span>
+                                    {% else %}
+                                        <span class="status-text status-approved" style="font-weight: 600;">Fixed & Available</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.is_open %}
+                                    <a class="btn-table-action modal-trigger" href="{% url 'maintenance_close' r.pk %}">
+                                        Close
+                                    </a>
+                                {% else %}
+                                    {% if r.unit.status == 'RETIRED' %}
+                                        <span class="muted" style="font-size: .75rem; color: #991b1b; font-weight: 600;">Retired</span>
+                                    {% else %}
+                                        <span class="muted" style="font-size: .75rem; color: #047857; font-weight: 600;">Fixed & Released</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="dashboard-empty-row">No maintenance records.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages or page.paginator.count > 0 %}
+            <nav class="pagination" aria-label="Maintenance pagination" style="display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1rem .5rem 0;">
+                <span class="pagination-info" style="font-size: .8rem; color: #4b5563;">
+                    Page {{ page.number }} of {{ page.paginator.num_pages|default:1 }} ({{ page.paginator.count }} total)
+                </span>
+                <div style="display: inline-flex; gap: .35rem;">
+                    {% if page.has_previous %}
+                        <a class="btn-table-action" href="?page={{ page.previous_page_number }}">&larr; Previous</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">&larr; Previous</span>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <a class="btn-table-action" href="?page={{ page.next_page_number }}">Next &rarr;</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">Next &rarr;</span>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </section>
+{% endblock %}

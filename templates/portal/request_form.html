@@ -1,0 +1,147 @@
+{% extends "portal/base.html" %}
+{% load static %}
+
+{% block title %}New Borrow Request | CEBIS{% endblock %}
+
+{% block content %}
+<div class="portal-form-wrapper">
+
+  <!-- Header Breadcrumb & Title -->
+  <div class="portal-page-header">
+    <a class="btn-back-breadcrumb" href="{% url 'portal_home' %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      <span>Back to Equipment Catalog</span>
+    </a>
+    <div class="portal-header-titles">
+      <span class="portal-header-eyebrow">EQUIPMENT BORROWING WORKFLOW</span>
+      <h1>Submit a Borrow Request</h1>
+      <p>Specify your required return date, purpose, and select up to three different catalog items.</p>
+    </div>
+  </div>
+
+  <form method="post" class="portal-request-card-form" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="portal-alert-error" role="alert">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="portal-request-grid">
+
+      <!-- Left Column: Dates & Purpose -->
+      <section class="portal-form-panel panel-details" aria-labelledby="loan-details-heading">
+        <div class="panel-header">
+          <div class="step-badge">1</div>
+          <div>
+            <h2 id="loan-details-heading">Loan Schedule &amp; Purpose</h2>
+            <p>Tell us when you need to return the equipment and how it will be used.</p>
+          </div>
+        </div>
+
+        <div class="portal-form-group{% if form.due_date.errors %} has-error{% endif %}">
+          <label class="portal-label" for="{{ form.due_date.id_for_label }}">
+            Desired Return Date <span class="required-star">*</span>
+          </label>
+          {{ form.due_date }}
+          {% if form.due_date.errors %}
+            <div class="portal-field-error" role="alert">{{ form.due_date.errors }}</div>
+          {% endif %}
+          <div class="portal-field-hint">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>Must be within <strong>{{ settings.max_loan_days }} days</strong> from today.</span>
+          </div>
+        </div>
+
+        <div class="portal-form-group{% if form.purpose.errors %} has-error{% endif %}">
+          <label class="portal-label" for="{{ form.purpose.id_for_label }}">
+            Purpose of Borrowing <span class="required-star">*</span>
+          </label>
+          {{ form.purpose }}
+          {% if form.purpose.errors %}
+            <div class="portal-field-error" role="alert">{{ form.purpose.errors }}</div>
+          {% endif %}
+          <div class="portal-field-hint">
+            <span>Provide a brief academic, research, or campus activity reason.</span>
+          </div>
+        </div>
+
+        <!-- Borrowing Policy Notice Box -->
+        <div class="policy-info-box">
+          <h4 class="policy-box-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            Important Guidelines
+          </h4>
+          <ul class="policy-box-list">
+            <li>Submitting this form creates a <strong>Pending</strong> request.</li>
+            <li>Specific physical units are allocated and reserved upon admin approval.</li>
+            <li>You can cancel pending or approved requests anytime before equipment is released.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Right Column: Equipment Selection (Up to 3 items) -->
+      <section class="portal-form-panel panel-items" aria-labelledby="equipment-items-heading">
+        <div class="panel-header">
+          <div class="step-badge">2</div>
+          <div>
+            <h2 id="equipment-items-heading">Choose Equipment Items</h2>
+            <p>Select up to 3 distinct items (max {{ settings.max_quantity }} units each).</p>
+          </div>
+        </div>
+
+        <div class="request-items-container">
+          {% for line in lines %}
+            <div class="request-item-slot-card {% if forloop.first %}slot-primary{% endif %}">
+              <div class="slot-header">
+                <span class="slot-number-badge">Item Slot #{{ forloop.counter }}</span>
+                {% if forloop.first %}
+                  <span class="slot-tag-required">Primary Item</span>
+                {% else %}
+                  <span class="slot-tag-optional">Optional</span>
+                {% endif %}
+              </div>
+
+              <div class="slot-fields-row">
+                <div class="portal-form-group field-item-select{% if line.item.errors %} has-error{% endif %}">
+                  <label class="portal-label" for="{{ line.item.id_for_label }}">Catalog Equipment{% if forloop.first %} <span class="required-star">*</span>{% endif %}</label>
+                  {{ line.item }}
+                  {% if line.item.errors %}
+                    <div class="portal-field-error" role="alert">{{ line.item.errors }}</div>
+                  {% endif %}
+                </div>
+
+                <div class="portal-form-group field-item-qty{% if line.quantity.errors %} has-error{% endif %}">
+                  <label class="portal-label" for="{{ line.quantity.id_for_label }}">Quantity{% if forloop.first %} <span class="required-star">*</span>{% endif %}</label>
+                  {{ line.quantity }}
+                  {% if line.quantity.errors %}
+                    <div class="portal-field-error" role="alert">{{ line.quantity.errors }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="items-limit-notice">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>Limit of <strong>{{ settings.max_quantity }} units</strong> per item type. Please select different items for each slot.</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Actions Bar -->
+    <div class="portal-form-actions-bar">
+      <button class="btn-submit-request" type="submit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        <span>Submit Request for Review</span>
+      </button>
+      <a class="btn-cancel-form" href="{% url 'portal_home' %}">Cancel &amp; Return</a>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

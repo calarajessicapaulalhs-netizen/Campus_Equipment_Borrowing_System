@@ -1,0 +1,69 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <h1>Request history for {{ account.get_full_name|default:account.username }}</h1>
+    </div>
+    <section class="records-card">
+        <div class="records-card-header">
+            <h2>Records</h2>
+        </div>
+        <div class="scroll">
+            <table class="dashboard-records-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Request</th>
+                        <th scope="col">Date</th>
+                        <th scope="col">Purpose</th>
+                        <th scope="col">Items</th>
+                        <th scope="col">Due date</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in requests %}
+                        <tr>
+                            <td># {{ r.pk }}</td>
+                            <td>{{ r.submitted_at|date:"Y-m-d" }}</td>
+                            <td>{{ r.purpose }}</td>
+                            <td>
+                                {% for line in r.lines.all %}
+                                    {{ line.item.name }} &times; {{ line.quantity }}{% if not forloop.last %}, {% endif %}
+                                {% empty %}
+                                    &mdash;
+                                {% endfor %}
+                            </td>
+                            <td>{{ r.due_date|date:"Y-m-d" }}</td>
+                            <td>
+                                {% if r.loan and r.loan.is_overdue %}
+                                    <span class="status-text status-overdue">Overdue</span>
+                                {% elif r.status == 'PENDING' %}
+                                    <span class="status-text status-pending">Pending</span>
+                                {% elif r.status == 'ISSUED' %}
+                                    <span class="status-text status-active">Active</span>
+                                {% elif r.status == 'APPROVED' %}
+                                    <span class="status-text status-approved">Approved</span>
+                                {% elif r.status == 'REJECTED' %}
+                                    <span class="status-text status-rejected">Rejected</span>
+                                {% elif r.status == 'RETURNED' %}
+                                    <span class="status-text status-returned">Returned</span>
+                                {% else %}
+                                    <span class="status-text">{{ r.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="dashboard-empty-row">No request history for this user.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "components/pagination.html" with page=page %}
+    </section>
+    <p style="margin-top: 1.25rem;">
+        <a class="btn-filter-reset modal-close" href="{% url 'accounts' %}">
+            &larr; Back to accounts
+        </a>
+    </p>
+{% endblock %}

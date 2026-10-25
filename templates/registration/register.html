@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Account | CEBIS{% endblock %}
+{% block body_class %}auth-page register-page{% endblock %}
+
+{% block content %}
+<div class="auth-split-wrapper">
+  <!-- Left Side: Brand & Visual -->
+  <aside class="auth-split-left" aria-label="Brand presentation">
+    <div class="auth-brand-content">
+      <img
+        class="auth-brand-logo"
+        src="{% static 'images/cebis-logo-white.png' %}"
+        alt="CEBIS Campus Equipment Borrowing and Inventory System"
+      >
+      <p class="auth-brand-tagline">
+        Register to borrow, return, and manage campus equipment with ease.
+      </p>
+    </div>
+  </aside>
+
+  <!-- Right Side: Form Container -->
+  <div class="auth-split-right" aria-label="Create Account">
+    <div class="auth-form-container auth-form-container-wide auth-form-card">
+      <h1 class="auth-form-title">Create Account</h1>
+
+      {% if form.non_field_errors %}
+        <div class="auth-alert-error" role="alert" aria-live="polite">
+          {% for error in form.non_field_errors %}
+            <span class="auth-alert-message">{{ error }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" action="{% url 'register' %}" class="auth-form" novalidate>
+        {% csrf_token %}
+
+        <div class="auth-input-group">
+          <label class="auth-input-label" for="id_username">USERNAME</label>
+          <input
+            type="text"
+            name="username"
+            id="id_username"
+            class="auth-input-underline{% if form.username.errors %} auth-input-invalid{% endif %}"
+            placeholder="Choose a username"
+            value="{{ form.username.value|default_if_none:'' }}"
+            autocomplete="username"
+            required
+          >
+          {% if form.username.errors %}
+            <div class="auth-field-error" role="alert">{{ form.username.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="auth-input-row">
+          <div class="auth-input-group">
+            <label class="auth-input-label" for="id_first_name">FIRST NAME</label>
+            <input
+              type="text"
+              name="first_name"
+              id="id_first_name"
+              class="auth-input-underline{% if form.first_name.errors %} auth-input-invalid{% endif %}"
+              placeholder="First name"
+              value="{{ form.first_name.value|default_if_none:'' }}"
+              autocomplete="given-name"
+              required
+            >
+            {% if form.first_name.errors %}
+              <div class="auth-field-error" role="alert">{{ form.first_name.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="auth-input-group">
+            <label class="auth-input-label" for="id_last_name">LAST NAME</label>
+            <input
+              type="text"
+              name="last_name"
+              id="id_last_name"
+              class="auth-input-underline{% if form.last_name.errors %} auth-input-invalid{% endif %}"
+              placeholder="Last name"
+              value="{{ form.last_name.value|default_if_none:'' }}"
+              autocomplete="family-name"
+              required
+            >
+            {% if form.last_name.errors %}
+              <div class="auth-field-error" role="alert">{{ form.last_name.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="auth-input-row">
+          <div class="auth-input-group">
+            <label class="auth-input-label" for="id_email">EMAIL</label>
+            <input
+              type="email"
+              name="email"
+              id="id_email"
+              class="auth-input-underline{% if form.email.errors %} auth-input-invalid{% endif %}"
+              placeholder="name@school.edu"
+              value="{{ form.email.value|default_if_none:'' }}"
+              autocomplete="email"
+              required
+            >
+            {% if form.email.errors %}
+              <div class="auth-field-error" role="alert">{{ form.email.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="auth-input-group">
+            <label class="auth-input-label" for="id_phone">PHONE NUMBER</label>
+            <input
+              type="tel"
+              name="phone"
+              id="id_phone"
+              class="auth-input-underline{% if form.phone.errors %} auth-input-invalid{% endif %}"
+              placeholder="e.g. 09123456789"
+              value="{{ form.phone.value|default_if_none:'' }}"
+              autocomplete="tel"
+            >
+            {% if form.phone.errors %}
+              <div class="auth-field-error" role="alert">{{ form.phone.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="auth-input-group">
+          <label class="auth-input-label" for="id_password1">PASSWORD</label>
+          <div class="auth-password-wrapper">
+            <input
+              type="password"
+              name="password1"
+              id="id_password1"
+              class="auth-input-underline{% if form.password1.errors %} auth-input-invalid{% endif %}"
+              placeholder="Create password"
+              autocomplete="new-password"
+              required
+            >
+            <button
+              type="button"
+              class="auth-eye-btn"
+              onclick="togglePasswordVisibility('id_password1', this)"
+              aria-label="Show password"
+            >
+              <svg class="eye-icon-closed eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+              <svg class="eye-icon-open eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          {% if form.password1.errors %}
+            <div class="auth-field-error auth-password-policy-errors" role="alert">{{ form.password1.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="auth-input-group">
+          <label class="auth-input-label" for="id_password2">CONFIRM PASSWORD</label>
+          <div class="auth-password-wrapper">
+            <input
+              type="password"
+              name="password2"
+              id="id_password2"
+              class="auth-input-underline{% if form.password2.errors %} auth-input-invalid{% endif %}"
+              placeholder="Confirm password"
+              autocomplete="new-password"
+              required
+            >
+            <button
+              type="button"
+              class="auth-eye-btn"
+              onclick="togglePasswordVisibility('id_password2', this)"
+              aria-label="Show confirm password"
+            >
+              <svg class="eye-icon-closed eye-icon-hide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+              <svg class="eye-icon-open eye-icon-show" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none;">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+          {% if form.password2.errors %}
+            <div class="auth-field-error" role="alert">{{ form.password2.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button class="btn-auth-primary" type="submit" style="margin-top: 1rem;">Register</button>
+
+        <p class="auth-prompt-text">Already have an account?</p>
+
+        <a class="btn-auth-secondary" href="{% url 'login' %}">Log in</a>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePasswordVisibility(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var closedIcon = btn.querySelector('.eye-icon-closed') || btn.querySelector('.eye-icon-hide');
+    var openIcon = btn.querySelector('.eye-icon-open') || btn.querySelector('.eye-icon-show');
+    if (!input) return;
+    if (input.type === 'password') {
+      // Reveal password -> eye opens
+      input.type = 'text';
+      btn.setAttribute('aria-label', 'Hide password');
+      if (closedIcon) closedIcon.style.display = 'none';
+      if (openIcon) openIcon.style.display = 'block';
+    } else {
+      // Mask password -> eye closes
+      input.type = 'password';
+      btn.setAttribute('aria-label', 'Show password');
+      if (closedIcon) closedIcon.style.display = 'block';
+      if (openIcon) openIcon.style.display = 'none';
+    }
+  }
+</script>
+{% endblock %}

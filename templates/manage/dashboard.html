@@ -1,0 +1,522 @@
+{% extends "manage/base.html" %}
+{% load static %}
+
+{% block body_class %}admin-shell admin-dashboard-shell{% endblock %}
+
+{% block title %}
+    Admin dashboard
+{% endblock %}
+
+{% block content %}
+    <h1>Dashboard</h1>
+
+    <!-- Top 4 Summary Cards -->
+    <div class="dashboard-stat-grid">
+        <section class="dashboard-stat dashboard-stat-available">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Available</span>
+                <div class="stat">{{ cards.available|default:"0" }}</div>
+            </div>
+        </section>
+        <section class="dashboard-stat dashboard-stat-pending">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Pending</span>
+                <div class="stat">{{ cards.pending|default:"0" }}</div>
+            </div>
+        </section>
+        <section class="dashboard-stat dashboard-stat-active">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Active Loans</span>
+                <div class="stat">{{ cards.active|default:"0" }}</div>
+            </div>
+        </section>
+        <section class="dashboard-stat dashboard-stat-overdue">
+            <div class="dashboard-stat-info">
+                <span class="dashboard-stat-label">Overdue</span>
+                <div class="stat">{{ cards.overdue|default:"0" }}</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Main Two-Column Layout -->
+    <div class="dashboard-columns-layout">
+        <!-- Left Column: Loans Trend Chart + Records Table -->
+        <div class="dashboard-left-column">
+            <!-- Card 1: Working Interactive Line Chart with Accurate Data -->
+            <section class="dashboard-card loans-chart-card">
+                <div class="dashboard-card-heading flex-between" style="align-items: flex-start;">
+                    <div>
+                        <h2>Loans Trend</h2>
+                        <p class="dashboard-card-sub" id="chart-sub-text">
+                            Loans issued over the last 7 days: <strong>{{ loans_last_7_days|default:"0" }}</strong>
+                        </p>
+                    </div>
+                    <div class="chart-timeframe-toggles">
+                        <button type="button" class="btn-timeframe active" id="btn-chart-7d">7 Days</button>
+                        <button type="button" class="btn-timeframe" id="btn-chart-6m">6 Months</button>
+                    </div>
+                </div>
+
+                <div class="chart-legend-row">
+                    <span class="chart-legend-item">
+                        <span class="legend-color-dot" style="background: #2563eb;"></span> Loans Issued
+                    </span>
+                    <span class="chart-legend-item">
+                        <span class="legend-color-dot" style="background: #f43f5e;"></span> Returns Completed
+                    </span>
+                </div>
+
+                <div class="loans-chart-canvas-container">
+                    <canvas id="loansLineChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Card 2: Records Table -->
+            <section class="dashboard-card recent-records-card">
+                <div class="dashboard-card-heading flex-between">
+                    <h2>Records</h2>
+                    <div class="records-filter-dropdown-container">
+                        <details class="records-filter-details">
+                            <summary class="records-filter-trigger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                                </svg>
+                                <span class="filter-dropdown-label">
+                                    {% if status_filter %}
+                                        {{ status_filter|title }}
+                                    {% else %}
+                                        All Record
+                                    {% endif %}
+                                </span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </summary>
+                            <div class="records-filter-menu">
+                                <a href="{% url 'admin_dashboard' %}" class="{% if not status_filter %}active{% endif %}">All Record</a>
+                                <a href="{% url 'admin_dashboard' %}?status=PENDING" class="{% if status_filter == 'PENDING' %}active{% endif %}">Pending</a>
+                                <a href="{% url 'admin_dashboard' %}?status=ISSUED" class="{% if status_filter == 'ISSUED' %}active{% endif %}">Active</a>
+                                <a href="{% url 'admin_dashboard' %}?status=OVERDUE" class="{% if status_filter == 'OVERDUE' %}active{% endif %}">Overdue</a>
+                                <a href="{% url 'admin_dashboard' %}?status=APPROVED" class="{% if status_filter == 'APPROVED' %}active{% endif %}">Approved</a>
+                                <a href="{% url 'admin_dashboard' %}?status=RETURNED" class="{% if status_filter == 'RETURNED' %}active{% endif %}">Returned</a>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+                <div class="scroll dashboard-records-scroll">
+                    <table class="dashboard-records-table">
+                        <thead>
+                            <tr>
+                                <th>Request</th>
+                                <th>Borrower and purpose</th>
+                                <th>Items</th>
+                                <th>Due date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in recent_records %}
+                                <tr>
+                                    <td># {{ r.pk }} <span class="text-date">{{ r.submitted_at|date:"Y-m-d" }}</span></td>
+                                    <td>
+                                        <div class="borrower-name">{{ r.owner.get_full_name|default:r.owner.username }}</div>
+                                        <div class="purpose-sub">{{ r.purpose|default:"General"|truncatechars:32 }}</div>
+                                    </td>
+                                    <td>
+                                        {% for line in r.lines.all %}
+                                            {{ line.item.name }} &times; {{ line.quantity }}{% if not forloop.last %}, {% endif %}
+                                        {% empty %}
+                                            &mdash;
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {% if r.loan %}
+                                            {{ r.loan.due_date|date:"Y-m-d" }}
+                                        {% else %}
+                                            {{ r.due_date|date:"Y-m-d"|default:"&mdash;" }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if r.loan and r.loan.is_overdue %}
+                                            <span class="status-text status-overdue">Overdue</span>
+                                        {% elif r.status == 'PENDING' %}
+                                            <span class="status-text status-pending">Pending</span>
+                                        {% elif r.status == 'ISSUED' %}
+                                            <span class="status-text status-active">Active</span>
+                                        {% elif r.status == 'PARTIAL' %}
+                                            <span class="status-text status-partial">Partial Returned</span>
+                                        {% elif r.status == 'APPROVED' %}
+                                            <span class="status-text status-approved">Approved</span>
+                                        {% elif r.status == 'REJECTED' %}
+                                            <span class="status-text status-rejected">Rejected</span>
+                                        {% elif r.status == 'RETURNED' %}
+                                            <span class="status-text status-returned">Returned</span>
+                                        {% else %}
+                                            <span class="status-text">{{ r.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a class="btn-table-action" href="{% url 'request_queue' %}?q={{ r.owner.username }}">Review</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="dashboard-empty-row">
+                                        No borrow requests found{% if status_filter %} matching "{{ status_filter|title }}"{% endif %}. When users submit requests, they will show up here live.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Right Column: Category Usage Chart on top, Active Loans below -->
+        <div class="dashboard-right-column">
+            <!-- Equipment Category Usage Chart (Rubric Part 2 - A7) -->
+            <section class="dashboard-card category-usage-card">
+                <div class="dashboard-card-heading">
+                    <h2>Category Usage</h2>
+                    <p class="dashboard-card-sub">Active demand and loans across equipment categories</p>
+                </div>
+                <div class="category-chart-container">
+                    <canvas id="categoryUsageChart"></canvas>
+                </div>
+                <div class="category-usage-summary" id="categoryLegend"></div>
+            </section>
+
+            <!-- Active Loans Table -->
+            <section class="dashboard-card active-loans-card">
+                <div class="dashboard-card-heading flex-between">
+                    <h2>Active Loans</h2>
+                    <div style="display: inline-flex; align-items: center; gap: .75rem;">
+                        <div class="active-loans-pagination" id="activeLoansPagination" style="display: inline-flex; align-items: center; gap: .35rem;">
+                            <button type="button" class="btn-timeframe" id="activeLoansPrevBtn" style="height: 24px !important; min-height: 24px !important; padding: 0 .5rem !important; font-size: .75rem !important;" disabled>&larr;</button>
+                            <span id="activeLoansPageInfo" style="font-size: .74rem; color: #6b7280; font-weight: 600;">1 / 1</span>
+                            <button type="button" class="btn-timeframe" id="activeLoansNextBtn" style="height: 24px !important; min-height: 24px !important; padding: 0 .5rem !important; font-size: .75rem !important;">&rarr;</button>
+                        </div>
+                        <a class="dashboard-view-all" href="{% url 'loans' %}">View all &rarr;</a>
+                    </div>
+                </div>
+                <div class="scroll dashboard-active-scroll">
+                    <table class="dashboard-active-table">
+                        <thead>
+                            <tr>
+                                <th>Request</th>
+                                <th>Borrower and purpose</th>
+                                <th>Items</th>
+                                <th>Due date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in active_loans %}
+                                <tr>
+                                    <td># {{ loan.request.pk }} <span class="text-date">{{ loan.issued_at|date:"Y-m-d" }}</span></td>
+                                    <td>
+                                        <div class="borrower-name">{{ loan.request.owner.get_full_name|default:loan.request.owner.username }}</div>
+                                        <div class="purpose-sub">{{ loan.request.purpose|default:"General"|truncatechars:32 }}</div>
+                                    </td>
+                                    <td>
+                                        {% for line in loan.request.lines.all %}
+                                            {{ line.item.name }} &times; {{ line.quantity }}{% if not forloop.last %}, {% endif %}
+                                        {% empty %}
+                                            &mdash;
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        <span class="text-date">{{ loan.due_date|date:"Y-m-d" }}</span>
+                                    </td>
+                                    <td>
+                                        {% if loan.is_overdue %}
+                                            <span class="status-text status-overdue">Overdue</span>
+                                        {% else %}
+                                            <span class="status-text status-active">Active</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="dashboard-empty-row">
+                                        No active loans right now. Issued equipment will appear here.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Chart.js and Interactive Line Chart Script -->
+    <script src="{% static 'js/chart.umd.min.js' %}"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dailyData = JSON.parse('{{ chart_daily_json|escapejs }}');
+        const monthlyData = JSON.parse('{{ chart_monthly_json|escapejs }}');
+        const canvas = document.getElementById('loansLineChart');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+
+        // Create gradients
+        const blueGrad = ctx.createLinearGradient(0, 0, 0, 180);
+        blueGrad.addColorStop(0, 'rgba(37, 99, 235, 0.16)');
+        blueGrad.addColorStop(1, 'rgba(37, 99, 235, 0.00)');
+
+        const pinkGrad = ctx.createLinearGradient(0, 0, 0, 180);
+        pinkGrad.addColorStop(0, 'rgba(244, 63, 94, 0.14)');
+        pinkGrad.addColorStop(1, 'rgba(244, 63, 94, 0.00)');
+
+        const loansChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyData.labels,
+                datasets: [
+                    {
+                        label: 'Loans Issued',
+                        data: dailyData.loans,
+                        borderColor: '#2563eb',
+                        backgroundColor: blueGrad,
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#2563eb',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'Returns Completed',
+                        data: dailyData.returns,
+                        borderColor: '#f43f5e',
+                        backgroundColor: pinkGrad,
+                        borderWidth: 2.5,
+                        tension: 0.35,
+                        fill: true,
+                        pointBackgroundColor: '#f43f5e',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#111827',
+                        titleColor: '#ffffff',
+                        bodyColor: '#e5e7eb',
+                        borderColor: '#374151',
+                        borderWidth: 1,
+                        padding: 10,
+                        boxPadding: 4,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function (context) {
+                                return ' ' + context.dataset.label + ': ' + context.parsed.y;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f3f4f6',
+                            borderDash: [4, 4],
+                        },
+                        ticks: {
+                            color: '#6b7280',
+                            font: {
+                                size: 11
+                            },
+                            precision: 0,
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+
+        // Timeframe toggle buttons
+        const btn7d = document.getElementById('btn-chart-7d');
+        const btn6m = document.getElementById('btn-chart-6m');
+        const subText = document.getElementById('chart-sub-text');
+
+        if (btn7d && btn6m) {
+            btn7d.addEventListener('click', function () {
+                btn7d.classList.add('active');
+                btn6m.classList.remove('active');
+                loansChart.data.labels = dailyData.labels;
+                loansChart.data.datasets[0].data = dailyData.loans;
+                loansChart.data.datasets[1].data = dailyData.returns;
+                loansChart.update();
+                if (subText) {
+                    subText.innerHTML = 'Loans issued over the last 7 days: <strong>{{ loans_last_7_days|default:"0" }}</strong>';
+                }
+            });
+
+            btn6m.addEventListener('click', function () {
+                btn6m.classList.add('active');
+                btn7d.classList.remove('active');
+                loansChart.data.labels = monthlyData.labels;
+                loansChart.data.datasets[0].data = monthlyData.loans;
+                loansChart.data.datasets[1].data = monthlyData.returns;
+                loansChart.update();
+                if (subText) {
+                    subText.innerHTML = 'Loans issued over the last 6 months';
+                }
+            });
+        }
+
+        // Equipment Category Usage Doughnut Chart
+        const catCanvas = document.getElementById('categoryUsageChart');
+        if (catCanvas) {
+            const catData = JSON.parse('{{ category_chart_json|escapejs }}');
+            if (catData && catData.labels && catData.labels.length > 0) {
+                const palette = [
+                    '#5b080c', '#2563eb', '#059669', '#d97706', 
+                    '#7c3aed', '#db2777', '#0891b2', '#4b5563'
+                ];
+                const bgColors = catData.labels.map((_, i) => palette[i % palette.length]);
+
+                new Chart(catCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: catData.labels,
+                        datasets: [{
+                            data: catData.usage,
+                            backgroundColor: bgColors,
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#111827',
+                                titleColor: '#ffffff',
+                                bodyColor: '#e5e7eb',
+                                borderColor: '#374151',
+                                borderWidth: 1,
+                                padding: 10,
+                                callbacks: {
+                                    label: function (context) {
+                                        const count = context.parsed || 0;
+                                        return ' ' + context.label + ': ' + count + ' loan(s)';
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '64%'
+                    }
+                });
+
+                const legendEl = document.getElementById('categoryLegend');
+                if (legendEl) {
+                    let html = '';
+                    catData.labels.forEach((label, i) => {
+                        const color = bgColors[i];
+                        const usage = catData.usage[i] || 0;
+                        html += '<span class="cat-legend-item">' +
+                            '<span class="cat-color-dot" style="background: ' + color + ';"></span>' +
+                            label + ': <strong>' + usage + '</strong>' +
+                            '</span>';
+                    });
+                    legendEl.innerHTML = html;
+                }
+            }
+        }
+
+        // Active Loans Client-Side Pagination (5 items per page)
+        const activeRows = document.querySelectorAll('.dashboard-active-table tbody tr:not(.dashboard-empty-row)');
+        const prevBtn = document.getElementById('activeLoansPrevBtn');
+        const nextBtn = document.getElementById('activeLoansNextBtn');
+        const pageInfo = document.getElementById('activeLoansPageInfo');
+        const paginationBox = document.getElementById('activeLoansPagination');
+
+        if (activeRows.length > 0) {
+            const pageSize = 5;
+            const totalPages = Math.ceil(activeRows.length / pageSize);
+            let currentPage = 1;
+
+            function showActivePage(page) {
+                currentPage = page;
+                const start = (page - 1) * pageSize;
+                const end = start + pageSize;
+                activeRows.forEach((row, idx) => {
+                    if (idx >= start && idx < end) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                if (pageInfo) {
+                    pageInfo.textContent = `${currentPage} / ${totalPages}`;
+                }
+                if (prevBtn) {
+                    prevBtn.disabled = (currentPage === 1);
+                    prevBtn.style.opacity = (currentPage === 1) ? '0.35' : '1';
+                    prevBtn.style.cursor = (currentPage === 1) ? 'default' : 'pointer';
+                }
+                if (nextBtn) {
+                    nextBtn.disabled = (currentPage === totalPages);
+                    nextBtn.style.opacity = (currentPage === totalPages) ? '0.35' : '1';
+                    nextBtn.style.cursor = (currentPage === totalPages) ? 'default' : 'pointer';
+                }
+            }
+
+            if (totalPages > 1) {
+                if (prevBtn) {
+                    prevBtn.addEventListener('click', function () {
+                        if (currentPage > 1) showActivePage(currentPage - 1);
+                    });
+                }
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', function () {
+                        if (currentPage < totalPages) showActivePage(currentPage + 1);
+                    });
+                }
+                showActivePage(1);
+            } else {
+                if (paginationBox) paginationBox.style.display = 'none';
+            }
+        } else {
+            if (paginationBox) paginationBox.style.display = 'none';
+        }
+    });
+    </script>
+{% endblock %}

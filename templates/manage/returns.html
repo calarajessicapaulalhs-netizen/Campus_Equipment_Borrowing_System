@@ -1,0 +1,89 @@
+{% extends "manage/base.html" %}
+{% block content %}
+    <div class="page-heading">
+        <h1>Returns</h1>
+    </div>
+    <section class="records-card">
+        <div class="records-card-header">
+            <h2>Records</h2>
+        </div>
+        <div class="scroll">
+            <table class="dashboard-records-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Borrower</th>
+                        <th scope="col">Request</th>
+                        <th scope="col">Asset</th>
+                        <th scope="col">Due date</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in allocations %}
+                        <tr>
+                            <td>
+                                <div class="borrower-name">{{ a.request_item.request.owner.get_full_name|default:a.request_item.request.owner.username }}</div>
+                                <div class="purpose-sub">{{ a.request_item.request.purpose|truncatechars:32 }}</div>
+                            </td>
+                            <td># {{ a.request_item.request_id }}</td>
+                            <td>
+                                <strong>{{ a.unit.asset_code }}</strong> ({{ a.unit.item.name }})
+                            </td>
+                            <td>{{ a.request_item.request.due_date|date:"Y-m-d" }}</td>
+                            <td>
+                                <a class="btn-table-action modal-trigger" href="{% url 'record_return' a.pk %}">
+                                    Return
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="dashboard-empty-row">No outstanding unit returns.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if page.has_other_pages or page.paginator.count > 0 %}
+            <nav class="pagination" aria-label="Returns pagination" style="display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1rem .5rem 0;">
+                <span class="pagination-info" style="font-size: .8rem; color: #4b5563;">
+                    Page {{ page.number }} of {{ page.paginator.num_pages|default:1 }} ({{ page.paginator.count }} total)
+                </span>
+                <div style="display: inline-flex; gap: .35rem;">
+                    {% if page.has_previous %}
+                        <a class="btn-table-action" href="?page={{ page.previous_page_number }}">&larr; Previous</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">&larr; Previous</span>
+                    {% endif %}
+                    {% if page.has_next %}
+                        <a class="btn-table-action" href="?page={{ page.next_page_number }}">Next &rarr;</a>
+                    {% else %}
+                        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">Next &rarr;</span>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    </section>
+    <section class="records-card" style="margin-top: 1.5rem;">
+        <div class="records-card-header"><h2>Recently returned</h2></div>
+        <div class="scroll">
+            <table class="dashboard-records-table">
+                <thead><tr><th>Borrower</th><th>Request</th><th>Asset</th><th>Date returned</th><th>Condition</th><th>Recorded by</th></tr></thead>
+                <tbody>
+                    {% for record in recent_returns %}
+                        <tr>
+                            <td>{{ record.allocation.request_item.request.owner.get_full_name|default:record.allocation.request_item.request.owner.username }}</td>
+                            <td># {{ record.allocation.request_item.request_id }}</td>
+                            <td><strong>{{ record.allocation.unit.asset_code }}</strong></td>
+                            <td>{{ record.returned_at|date:"Y-m-d" }}</td>
+                            <td>{{ record.get_condition_display }}</td>
+                            <td>{{ record.recorded_by.get_full_name|default:record.recorded_by.username }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="6" class="dashboard-empty-row">No returns recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

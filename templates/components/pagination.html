@@ -1,0 +1,19 @@
+{% if page.has_other_pages or page.paginator.count > 0 %}
+  <nav class="pagination" aria-label="Table pagination" style="display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1rem .5rem 0;">
+    <span class="pagination-info" style="font-size: .8rem; color: #4b5563;">
+      Page {{ page.number }} of {{ page.paginator.num_pages|default:1 }} ({{ page.paginator.count }} total)
+    </span>
+    <div style="display: inline-flex; gap: .35rem;">
+      {% if page.has_previous %}
+        <a class="btn-table-action" href="?page={{ page.previous_page_number }}{% if query_params %}&{{ query_params }}{% elif q %}&q={{ q }}{% endif %}">&larr; Previous</a>
+      {% else %}
+        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">&larr; Previous</span>
+      {% endif %}
+      {% if page.has_next %}
+        <a class="btn-table-action" href="?page={{ page.next_page_number }}{% if query_params %}&{{ query_params }}{% elif q %}&q={{ q }}{% endif %}">Next &rarr;</a>
+      {% else %}
+        <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">Next &rarr;</span>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}

@@ -1,0 +1,215 @@
+{% extends "manage/base.html" %}
+
+{% block content %}
+  <div class="page-heading">
+    <h1>Request</h1>
+  </div>
+
+  <form method="get" class="requests-filter-bar" id="requests-filter-form">
+    <div class="filter-left-col">
+      <label class="filter-field">
+        <span class="filter-field-label">Search</span>
+        <input
+          type="search"
+          name="q"
+          value="{{ q }}"
+          placeholder="Search borrower or purpose..."
+          class="filter-search-input"
+          onsearch="this.form.submit();"
+        >
+      </label>
+    </div>
+    <div class="filter-right-col" style="display: flex; align-items: flex-end; gap: .65rem; flex-wrap: wrap;">
+      <label class="filter-field">
+        <span class="filter-field-label">Status</span>
+        <select name="status" class="filter-select" onchange="this.form.submit();">
+          <option value="">All statuses</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if status == value %}selected{% endif %}>
+              {% if value == 'PARTIAL' %}Partial Returned{% else %}{{ label }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="filter-field">
+        <span class="filter-field-label">Date</span>
+        <select name="date_preset" id="date-preset-select" class="filter-select" onchange="handleDatePresetChange(this.value);">
+          <option value="" {% if not date_preset and not start and not end %}selected{% endif %}>All dates</option>
+          <option value="today" {% if date_preset == 'today' %}selected{% endif %}>Today</option>
+          <option value="yesterday" {% if date_preset == 'yesterday' %}selected{% endif %}>Yesterday</option>
+          <option value="week" {% if date_preset == 'week' %}selected{% endif %}>Past 7 days</option>
+          <option value="month" {% if date_preset == 'month' %}selected{% endif %}>This month</option>
+          <option value="custom" {% if date_preset == 'custom' or start or end and not date_preset %}selected{% endif %}>Custom range…</option>
+        </select>
+      </label>
+
+      <div id="custom-date-container" style="display: {% if date_preset == 'custom' or start or end and not date_preset %}flex{% else %}none{% endif %}; align-items: flex-end; gap: .45rem;">
+        <label class="filter-field">
+          <span class="filter-field-label">From</span>
+          <input type="date" name="start" id="start-date-input" value="{{ start }}" class="filter-date-input">
+        </label>
+        <label class="filter-field">
+          <span class="filter-field-label">To</span>
+          <input type="date" name="end" id="end-date-input" value="{{ end }}" class="filter-date-input">
+        </label>
+        <button type="submit" class="btn-filter-submit" title="Apply custom date range" style="height: 34px; padding: 0 .9rem;">
+          Filter
+        </button>
+      </div>
+
+      {% if q or status or start or end or date_preset %}
+        <a href="{% url 'request_queue' %}" class="btn-filter-reset" title="Clear filters">Clear</a>
+      <button type="submit" class="btn-filter-submit">Search</button>
+      {% endif %}
+    </div>
+  </form>
+
+  <section class="records-card">
+    <div class="records-card-header">
+      <h2>Records</h2>
+    </div>
+    <div class="scroll">
+      <table class="dashboard-records-table">
+        <thead>
+          <tr>
+            <th scope="col">Request</th>
+            <th scope="col">Borrower and purpose</th>
+            <th scope="col">Items</th>
+            <th scope="col">Due date</th>
+            <th scope="col">Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in page %}
+            <tr>
+              <td>
+                # {{ r.pk }}
+                <span class="text-date">{{ r.submitted_at|date:"Y-m-d" }}</span>
+              </td>
+              <td>
+                <div class="borrower-name">{{ r.owner.get_full_name|default:r.owner.username }}</div>
+                <div class="purpose-sub">{{ r.purpose|default:"General" }}</div>
+              </td>
+              <td>
+                {% for line in r.lines.all %}
+                  <div>
+                    {{ line.item.name }} &times; {{ line.quantity }}
+                    {% if r.status == 'PENDING' %}
+                      <span class="availability {% if line.available_quantity < line.quantity %}availability-low{% endif %}">
+                        ({{ line.available_quantity }} available)
+                      </span>
+                    {% endif %}
+                  </div>
+                {% empty %}
+                  &mdash;
+                {% endfor %}
+              </td>
+              <td>{{ r.due_date|date:"Y-m-d" }}</td>
+              <td>
+                {% if r.loan and r.loan.is_overdue %}
+                  <span class="status-text status-overdue">Overdue</span>
+                {% elif r.status == 'PENDING' %}
+                  <span class="status-text status-pending">Pending</span>
+                {% elif r.status == 'ISSUED' %}
+                  <span class="status-text status-active">Active</span>
+                {% elif r.status == 'APPROVED' %}
+                  <span class="status-text status-approved">Approved</span>
+                {% elif r.status == 'REJECTED' %}
+                  <span class="status-text status-rejected">Rejected</span>
+                {% elif r.status == 'RETURNED' %}
+                  <span class="status-text status-returned">Returned</span>
+                {% elif r.status == 'PARTIAL' %}
+                  <span class="status-text status-partial">Partial Returned</span>
+                {% else %}
+                  <span class="status-text">{{ r.get_status_display }}</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="action-group">
+                  {% if r.status == 'PENDING' %}
+                    <a
+                      class="btn-table-action modal-trigger"
+                      href="{% url 'request_decide' r.pk %}"
+                      aria-label="Review request {{ r.pk }}"
+                    >
+                      Review
+                    </a>
+                  {% elif r.status == 'APPROVED' %}
+                    <a
+                      class="btn-table-action modal-trigger"
+                      href="{% url 'change_due_date' r.pk %}"
+                    >
+                      Due date
+                    </a>
+                    <form
+                      class="inline"
+                      method="post"
+                      action="{% url 'issue' r.pk %}"
+                      onsubmit="return confirm('Issue this loan to the borrower?')"
+                    >
+                      {% csrf_token %}
+                      <button class="btn-table-action" type="submit">Issue</button>
+                    </form>
+                  {% else %}
+                    <span class="muted" style="font-size: .75rem;">&mdash;</span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="dashboard-empty-row">
+                No requests match these filters.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% if page.has_other_pages or page.paginator.count > 0 %}
+    <nav class="pagination" aria-label="Request pages" style="display: flex; align-items: center; justify-content: flex-end; gap: .75rem; padding: 1rem .5rem 0;">
+      <span class="pagination-info" style="font-size: .8rem; color: #4b5563;">
+        Page {{ page.number }} of {{ page.paginator.num_pages|default:1 }} ({{ page.paginator.count }} total)
+      </span>
+      <div style="display: inline-flex; gap: .35rem;">
+        {% if page.has_previous %}
+          <a
+            class="btn-table-action"
+            href="?page={{ page.previous_page_number }}&status={{ status }}&q={{ q }}&start={{ start }}&end={{ end }}&date_preset={{ date_preset }}"
+          >&larr; Previous</a>
+        {% else %}
+          <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">&larr; Previous</span>
+        {% endif %}
+        {% if page.has_next %}
+          <a
+            class="btn-table-action"
+            href="?page={{ page.next_page_number }}&status={{ status }}&q={{ q }}&start={{ start }}&end={{ end }}&date_preset={{ date_preset }}"
+          >Next &rarr;</a>
+        {% else %}
+          <span class="btn-table-action disabled" style="opacity: 0.45; pointer-events: none; cursor: default;">Next &rarr;</span>
+        {% endif %}
+      </div>
+    </nav>
+  {% endif %}
+
+  <script>
+    function handleDatePresetChange(val) {
+      var container = document.getElementById('custom-date-container');
+      var form = document.getElementById('requests-filter-form');
+      if (val === 'custom') {
+        if (container) container.style.display = 'flex';
+      } else {
+        if (container) container.style.display = 'none';
+        var s = document.getElementById('start-date-input');
+        var e = document.getElementById('end-date-input');
+        if (s) s.value = '';
+        if (e) e.value = '';
+        if (form) form.submit();
+      }
+    }
+  </script>
+{% endblock %}
